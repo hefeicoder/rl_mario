@@ -9,7 +9,7 @@ written to be read as a tutorial on *how RL actually works* — not just code.
 > reproducible end-to-end; drop your winning run's GIF into the badge below
 > once you've cleared 1-1.
 
-<!-- After your first win: python src/play.py --checkpoint checkpoints/ppo_mario.zip --record -->
+<!-- After your first win: python src/play.py --checkpoint checkpoints/ppo_mario.zip --deterministic --record -->
 <!-- ![Mario clears World 1-1](videos/mario_1-1.gif) -->
 
 ---
@@ -241,11 +241,25 @@ Systematic tuning and reward-shaping experiments are a planned **Stage 04**.
 Two ways, both in `src/play.py`:
 
 ```bash
-# Live: watch Mario play in a real-time NES window
+# Live: open a real-time NES window (plays 3 episodes by default)
 python src/play.py --checkpoint checkpoints/ppo_mario.zip
 
-# Record: save an MP4/GIF (rock-solid regardless of windowing)
+# Record: save a GIF (rock-solid regardless of windowing)
 python src/play.py --checkpoint checkpoints/ppo_mario.zip --record --out videos/mario_1-1.gif
+```
+
+**Stochastic vs. deterministic actions.** By default `play.py` *samples* from
+the policy, exactly like training does — so each episode varies and an early,
+weak agent explores further than its brittle greedy action would. Pass
+`--deterministic` to always take the argmax action; that's best for a
+*well-trained* agent (crisp, optimal play), but on the deterministic NES
+emulator a weak greedy policy produces the **identical run every episode** and
+often gets stuck in a death-loop. Rule of thumb: stochastic while learning,
+`--deterministic` for the final winner.
+
+```bash
+python src/play.py --checkpoint checkpoints/ppo_mario.zip --deterministic   # final agent
+python src/play.py --checkpoint checkpoints/ppo_mario.zip --episodes 5       # watch more runs
 ```
 
 You can point `--checkpoint` at **mid-training checkpoints** too, to watch the
@@ -270,8 +284,8 @@ python stages/01_random_agent/run.py
 # 4. Train PPO to beat 1-1 (~5.4 h on M1 Max); watch tb_logs in TensorBoard
 python src/train.py --algo ppo --timesteps 4000000 --out checkpoints/ppo_mario
 
-# 5. Watch / record the win
-python src/play.py --checkpoint checkpoints/ppo_mario.zip --record
+# 5. Watch / record the win (--deterministic = the trained agent's best play)
+python src/play.py --checkpoint checkpoints/ppo_mario.zip --deterministic --record
 ```
 
 Exact pinned versions are in `requirements.txt`. Note: the NES emulator plus

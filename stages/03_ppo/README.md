@@ -53,11 +53,11 @@ and then climb.
 Once `mario/flag_rate` is reliably above 0:
 
 ```bash
-# Watch it live
-python src/play.py --checkpoint checkpoints/ppo_mario.zip
+# Watch it live (use --deterministic for a trained agent's crisp, optimal play)
+python src/play.py --checkpoint checkpoints/ppo_mario.zip --deterministic
 
 # Record the winning run for the README
-python src/play.py --checkpoint checkpoints/ppo_mario.zip --record --out videos/mario_1-1.gif
+python src/play.py --checkpoint checkpoints/ppo_mario.zip --deterministic --record --out videos/mario_1-1.gif
 
 # Preserve the winning model (force-add past .gitignore)
 cp checkpoints/ppo_mario.zip checkpoints/mario_1-1_best.zip
