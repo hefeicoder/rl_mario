@@ -16,7 +16,23 @@ from stable_baselines3 import DQN, PPO
 from src.env import make_mario_env
 
 
+def _resolve_checkpoint(checkpoint):
+    """Allow --checkpoint to be a directory: pick the most recent .zip in it.
+    Lets you play the latest snapshot while training keeps writing new ones."""
+    if checkpoint and os.path.isdir(checkpoint):
+        import glob
+
+        zips = glob.glob(os.path.join(checkpoint, "*.zip"))
+        if not zips:
+            raise FileNotFoundError(f"no .zip checkpoints found in {checkpoint}")
+        latest = max(zips, key=os.path.getmtime)
+        print(f"latest checkpoint: {latest}")
+        return latest
+    return checkpoint
+
+
 def _load(checkpoint):
+    checkpoint = _resolve_checkpoint(checkpoint)
     if checkpoint is None:
         return None
     # A PPO and a DQN zip are not interchangeable; try PPO first, fall back.

@@ -265,9 +265,21 @@ python src/play.py --checkpoint checkpoints/ppo_mario.zip --deterministic   # fi
 python src/play.py --checkpoint checkpoints/ppo_mario.zip --episodes 5       # watch more runs
 ```
 
-You can point `--checkpoint` at **mid-training checkpoints** too, to watch the
-agent improve over time — random flailing → moves right → clears the level. The
-recorded GIF is what goes at the top of this README once you've won.
+**Play the latest snapshot while training is still running.** `train.py` saves
+an intermediate checkpoint every `--save-freq` steps (default 100k) next to
+`--out`, e.g. `checkpoints/ppo_mario_500000_steps.zip`. In a second terminal,
+point `--checkpoint` at the *directory* and `play.py` grabs the most recent one
+automatically:
+
+```bash
+python src/play.py --checkpoint checkpoints/    # newest snapshot, no interference with training
+```
+
+Playing is a separate process with its own emulator, so it won't disturb the
+training run. Watching successive snapshots (`_500000_steps`, `_1000000_steps`,
+…) is the best way to *see* the agent improve — random flailing → moves right →
+clears the level. The recorded GIF of the final winner is what goes at the top
+of this README.
 
 ---
 

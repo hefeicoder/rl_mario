@@ -12,7 +12,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import numpy as np
 from stable_baselines3 import DQN, PPO
-from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.callbacks import (
+    BaseCallback,
+    CallbackList,
+    CheckpointCallback,
+)
 from stable_baselines3.common.vec_env import (
     DummyVecEnv,
     SubprocVecEnv,
@@ -80,15 +84,32 @@ def main():
     p.add_argument("--algo", choices=ALGOS, default="ppo")
     p.add_argument("--timesteps", type=int, default=1_000_000)
     p.add_argument("--out", default="checkpoints/mario")
+    p.add_argument("--run-name", default=None,
+                   help="TensorBoard run folder name (default: PPO_N / DQN_N)")
+    p.add_argument("--save-freq", type=int, default=100_000,
+                   help="save an intermediate checkpoint every N total timesteps "
+                        "(so you can play snapshots while training continues)")
     args = p.parse_args()
 
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     n_envs = N_ENVS if args.algo == "ppo" else 1
     model, venv = build_model(args.algo, n_envs=n_envs)
+
+    # CheckpointCallback counts its own _on_step calls (one per n_envs steps),
+    # so divide by n_envs to save roughly every `save_freq` *total* timesteps.
+    prefix = os.path.basename(args.out)
+    checkpoint_cb = CheckpointCallback(
+        save_freq=max(args.save_freq // n_envs, 1),
+        save_path=os.path.dirname(args.out) or ".",
+        name_prefix=prefix,
+    )
+    callbacks = CallbackList([MarioStatsCallback(), checkpoint_cb])
+
     model.learn(
         total_timesteps=args.timesteps,
         progress_bar=True,
-        callback=MarioStatsCallback(),
+        callback=callbacks,
+        tb_log_name=args.run_name or args.algo.upper(),
     )
     model.save(args.out)
     venv.close()

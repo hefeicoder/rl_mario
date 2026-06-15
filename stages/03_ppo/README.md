@@ -26,7 +26,19 @@ source venv/bin/activate
 python src/train.py --algo ppo --timesteps 100000 --out checkpoints/ppo_smoke
 
 # THE run. ~5.4 hours on M1 Max (measured ~207 env-steps/s, 8 envs, CPU).
-python src/train.py --algo ppo --timesteps 4000000 --out checkpoints/ppo_mario
+# --run-name names the TensorBoard run; --save-freq saves snapshots you can
+# watch mid-training (see "Watch a snapshot while it trains" below).
+python src/train.py --algo ppo --timesteps 4000000 --out checkpoints/ppo_mario \
+    --run-name ppo_4M_baseline --save-freq 250000
+```
+
+### Watch a snapshot while it trains
+
+In a second terminal, play the most recent snapshot (own emulator, doesn't
+disturb training):
+
+```bash
+python src/play.py --checkpoint checkpoints/ --scale 3
 ```
 
 Watch it learn in another terminal:
