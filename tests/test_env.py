@@ -27,3 +27,13 @@ def test_random_episode_reports_reward_and_done():
     assert steps > 0
     assert isinstance(total, float)
     env.close()
+
+
+def test_preprocessed_observation_shape():
+    env = make_mario_env(preprocess=True)
+    obs, info = env.reset(seed=0)
+    # 4 stacked grayscale 84x84 frames, channels-first for SB3 CNN
+    assert np.asarray(obs).shape == (4, 84, 84)
+    obs, reward, terminated, truncated, info = env.step(env.action_space.sample())
+    assert np.asarray(obs).shape == (4, 84, 84)
+    env.close()

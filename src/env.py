@@ -17,6 +17,12 @@ See ``stages/00_setup/README.md`` for why each piece is needed.
 import gym
 import gym_super_mario_bros
 from gym_super_mario_bros.actions import SIMPLE_MOVEMENT
+from gymnasium.wrappers import (
+    FrameStackObservation,
+    GrayscaleObservation,
+    MaxAndSkipObservation,
+    ResizeObservation,
+)
 from nes_py.wrappers import JoypadSpace
 from shimmy import GymV26CompatibilityV0
 
@@ -48,7 +54,20 @@ def make_mario_env(world_stage="SuperMarioBros-1-1-v0", preprocess=True):
     legacy = ResetCompat(legacy)
     env = GymV26CompatibilityV0(env=legacy)  # -> Gymnasium API
     if preprocess:
-        from src.env import apply_preprocessing  # defined in Task 4
-
         env = apply_preprocessing(env)
+    return env
+
+
+def apply_preprocessing(env, skip=4, size=84, stack=4):
+    """Make raw NES frames tractable for a CNN policy.
+
+    skip+max-pool frames -> grayscale -> resize to ``size`` x ``size`` ->
+    stack ``stack`` frames so motion is observable. Output is a
+    channels-first ``(stack, size, size)`` uint8 tensor, the layout SB3's
+    ``CnnPolicy`` expects.
+    """
+    env = MaxAndSkipObservation(env, skip=skip)  # act every `skip` frames
+    env = GrayscaleObservation(env, keep_dim=False)
+    env = ResizeObservation(env, (size, size))
+    env = FrameStackObservation(env, stack_size=stack)  # -> (stack, size, size)
     return env
