@@ -189,9 +189,14 @@ here than DQN. Full runbook: [`stages/03_ppo/README.md`](stages/03_ppo/README.md
 Train, then watch the curves live:
 
 ```bash
-python src/train.py --algo ppo --timesteps 4000000 --out checkpoints/ppo_mario
+python src/train.py --algo ppo --timesteps 4000000 --out checkpoints/ppo_mario \
+    --run-name ppo_4M_baseline --save-freq 250000
 tensorboard --logdir tb_logs    # http://localhost:6006
 ```
+
+`--run-name` names the TensorBoard run (instead of the auto `PPO_1`, `PPO_2`,
+…), and `--save-freq` writes an intermediate checkpoint every N steps so you can
+play snapshots while training continues (see §9). Both are optional.
 
 This project adds two Mario-specific TensorBoard curves (via
 `MarioStatsCallback` in `src/train.py`) so progress toward *winning* is legible,
@@ -204,11 +209,18 @@ not just reward:
   This usually moves well before `flag_rate` does.
 - **`rollout/ep_rew_mean`** — overall reward; should trend up.
 
-**What "learning" looks like:** flat curves for the first several hundred
-thousand steps (Mario is a hard exploration problem), then `max_x_pos` creeps
-right, then `flag_rate` lifts off 0. **Common failure modes:** stuck behind the
-first pipe/gap (needs more exploration — raise `ent_coef`), or reward rising
-while `max_x_pos` stalls (agent farming a local reward instead of progressing).
+**What "learning" looks like:** progress comes in **bursts, not a smooth line**.
+Typically `max_x_pos` climbs quickly early (easy ground), then **plateaus at a
+hard obstacle** for tens of thousands of steps, then breaks through and jumps to
+the next plateau — because clearing one obstacle unlocks a stretch of easy
+ground. The curve is also noisy and **non-monotonic** (it dips and recovers):
+`max_x_pos` is a rolling average over recent episodes, and PPO samples actions
+stochastically, so individual episodes vary. Watch the smoothed trend, not
+single steps. `flag_rate` stays at 0 until `max_x_pos` nears 3160, then lifts
+off. **Common failure modes:** a *lasting* plateau where `max_x_pos` flatlines
+while entropy keeps falling (stuck at an obstacle — raise `ent_coef` and/or
+`gamma`), or reward rising while `max_x_pos` stalls (farming a local reward
+instead of progressing).
 
 **Performance note:** measured ~207 env-steps/s with 8 envs on an Apple M1 Max,
 so 4M steps ≈ 5.4 hours. Training is **emulator-bound, not compute-bound** —
@@ -228,9 +240,15 @@ rough order of impact:
   steps.
 - **`ent_coef`** (exploration). Raise it if the agent gets stuck early; lower it
   once it's reliably progressing, to sharpen the policy.
+- **`gamma`** (discount / horizon). We default to 0.9, which is fairly myopic;
+  raising toward 0.95–0.99 makes the agent value *delayed* payoffs more — useful
+  when a running jump over a gap sacrifices immediate progress for reward on the
+  far side.
 - **`learning_rate` / `n_steps` / `clip_range`.** Stability vs. speed trade-offs.
 - **Reward shaping.** Optionally add your own bonuses (e.g., for grabbing the
   flag) by wrapping the env — a clean place to experiment.
+
+All of these live in `src/config.py` (`PPO_CONFIG` / `DQN_CONFIG`).
 
 Systematic tuning and reward-shaping experiments are a planned **Stage 04**.
 
@@ -297,7 +315,8 @@ pytest -q
 python stages/01_random_agent/run.py
 
 # 4. Train PPO to beat 1-1 (~5.4 h on M1 Max); watch tb_logs in TensorBoard
-python src/train.py --algo ppo --timesteps 4000000 --out checkpoints/ppo_mario
+python src/train.py --algo ppo --timesteps 4000000 --out checkpoints/ppo_mario \
+    --run-name ppo_4M_baseline --save-freq 250000
 
 # 5. Watch / record the win (--deterministic = the trained agent's best play)
 python src/play.py --checkpoint checkpoints/ppo_mario.zip --deterministic --record
