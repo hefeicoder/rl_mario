@@ -50,16 +50,28 @@ def record_episode(checkpoint, out_path, max_steps=4000):
     return out_path
 
 
-def play_live(checkpoint, max_steps=4000):
+def play_live(checkpoint, episodes=3, max_steps=4000, fps=30):
+    """Open a real-time NES window and watch the agent play.
+
+    Uses render_mode="human" so nes-py pops a game window. We play a few
+    episodes back-to-back (an early agent dies fast, so one episode is a
+    blink) with a small delay so it's watchable.
+    """
+    import time
+
     model = _load(checkpoint)
-    env = make_mario_env(preprocess=True)
-    obs, info = env.reset(seed=0)
-    for _ in range(max_steps):
-        action = _select_action(model, obs, env)
-        obs, _, terminated, truncated, info = env.step(action)
+    env = make_mario_env(preprocess=True, render_mode="human")
+    for ep in range(episodes):
+        obs, info = env.reset(seed=ep)
         env.render()
-        if terminated or truncated:
-            break
+        for _ in range(max_steps):
+            action = _select_action(model, obs, env)
+            obs, _, terminated, truncated, info = env.step(action)
+            env.render()
+            time.sleep(1.0 / fps)
+            if terminated or truncated:
+                break
+        print(f"episode {ep}: x_pos={info.get('x_pos')} flag={info.get('flag_get')}")
     env.close()
 
 
@@ -68,12 +80,13 @@ def main():
     p.add_argument("--checkpoint", default=None)
     p.add_argument("--record", action="store_true")
     p.add_argument("--out", default="videos/mario_1-1.gif")
+    p.add_argument("--episodes", type=int, default=3)
     args = p.parse_args()
     if args.record:
         path = record_episode(args.checkpoint, args.out)
         print(f"recorded -> {path}")
     else:
-        play_live(args.checkpoint)
+        play_live(args.checkpoint, episodes=args.episodes)
 
 
 if __name__ == "__main__":

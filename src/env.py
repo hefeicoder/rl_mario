@@ -36,7 +36,8 @@ class ResetCompat(gym.Wrapper):
         return self.env.reset()
 
 
-def make_mario_env(world_stage="SuperMarioBros-1-1-v0", preprocess=True):
+def make_mario_env(world_stage="SuperMarioBros-1-1-v0", preprocess=True,
+                   render_mode="rgb_array"):
     """Build a Gymnasium-compatible Super Mario Bros environment.
 
     Args:
@@ -44,11 +45,14 @@ def make_mario_env(world_stage="SuperMarioBros-1-1-v0", preprocess=True):
         preprocess: if True, apply the CNN preprocessing wrapper stack
             (grayscale / resize / frame-skip / frame-stack). If False,
             return raw 240x256x3 RGB frames (useful for rendering/inspection).
+        render_mode: ``"rgb_array"`` (default) returns frames from
+            ``render()`` — used for training and for recording videos.
+            ``"human"`` opens a real-time NES window — used to watch live.
     """
     legacy = gym_super_mario_bros.make(
         world_stage,
         apply_api_compatibility=True,  # old 4-tuple env -> gym 0.26 new API
-        render_mode="rgb_array",
+        render_mode=render_mode,
     )
     legacy = JoypadSpace(legacy, SIMPLE_MOVEMENT)  # reduce action space to 7
     legacy = ResetCompat(legacy)
