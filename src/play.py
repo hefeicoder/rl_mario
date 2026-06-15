@@ -1,0 +1,80 @@
+"""Watch or record a trained Mario agent.
+
+    python src/play.py --checkpoint checkpoints/mario.zip            # live window
+    python src/play.py --checkpoint checkpoints/mario.zip --record   # save gif
+"""
+import argparse
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import imageio
+import numpy as np
+from stable_baselines3 import DQN, PPO
+
+from src.env import make_mario_env
+
+
+def _load(checkpoint):
+    if checkpoint is None:
+        return None
+    # A PPO and a DQN zip are not interchangeable; try PPO first, fall back.
+    try:
+        return PPO.load(checkpoint)
+    except Exception:
+        return DQN.load(checkpoint)
+
+
+def _select_action(model, obs, env):
+    if model is None:
+        return env.action_space.sample()
+    action, _ = model.predict(np.asarray(obs), deterministic=True)
+    return int(action)
+
+
+def record_episode(checkpoint, out_path, max_steps=4000):
+    model = _load(checkpoint)
+    env = make_mario_env(preprocess=True)
+    obs, info = env.reset(seed=0)
+    frames = []
+    for _ in range(max_steps):
+        action = _select_action(model, obs, env)
+        obs, _, terminated, truncated, info = env.step(action)
+        frames.append(np.asarray(env.render()))  # raw NES screen
+        if terminated or truncated:
+            break
+    env.close()
+    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+    imageio.mimsave(out_path, frames, fps=30)
+    return out_path
+
+
+def play_live(checkpoint, max_steps=4000):
+    model = _load(checkpoint)
+    env = make_mario_env(preprocess=True)
+    obs, info = env.reset(seed=0)
+    for _ in range(max_steps):
+        action = _select_action(model, obs, env)
+        obs, _, terminated, truncated, info = env.step(action)
+        env.render()
+        if terminated or truncated:
+            break
+    env.close()
+
+
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("--checkpoint", default=None)
+    p.add_argument("--record", action="store_true")
+    p.add_argument("--out", default="videos/mario_1-1.gif")
+    args = p.parse_args()
+    if args.record:
+        path = record_episode(args.checkpoint, args.out)
+        print(f"recorded -> {path}")
+    else:
+        play_live(args.checkpoint)
+
+
+if __name__ == "__main__":
+    main()
