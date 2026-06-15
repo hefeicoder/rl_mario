@@ -241,12 +241,15 @@ Systematic tuning and reward-shaping experiments are a planned **Stage 04**.
 Two ways, both in `src/play.py`:
 
 ```bash
-# Live: open a real-time NES window (plays 3 episodes by default)
+# Live: open a real-time NES window, 3x size (plays 3 episodes by default)
 python src/play.py --checkpoint checkpoints/ppo_mario.zip
 
 # Record: save a GIF (rock-solid regardless of windowing)
 python src/play.py --checkpoint checkpoints/ppo_mario.zip --record --out videos/mario_1-1.gif
 ```
+
+The native NES screen is 240×256 (tiny on a Retina display), so the live
+window defaults to **3×**. Change it with `--scale` (e.g. `--scale 4`).
 
 **Stochastic vs. deterministic actions.** By default `play.py` *samples* from
 the policy, exactly like training does — so each episode varies and an early,
