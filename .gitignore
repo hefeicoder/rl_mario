@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+checkpoints/
+videos/
+runs/
+tb_logs/
+.DS_Store
+.pytest_cache/
+# keep the final winning model and demo gif (force-added explicitly)
+!checkpoints/mario_1-1_best.zip
+!videos/mario_1-1.gif
