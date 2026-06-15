@@ -11,3 +11,19 @@ def test_raw_env_builds_and_steps():
     assert isinstance(float(reward), float)
     assert "flag_get" in info  # Mario env exposes this
     env.close()
+
+
+def test_random_episode_reports_reward_and_done():
+    env = make_mario_env(preprocess=False)
+    env.reset(seed=0)
+    total = 0.0
+    done = False
+    steps = 0
+    while not done and steps < 500:
+        _, reward, terminated, truncated, info = env.step(env.action_space.sample())
+        total += float(reward)
+        done = terminated or truncated
+        steps += 1
+    assert steps > 0
+    assert isinstance(total, float)
+    env.close()
