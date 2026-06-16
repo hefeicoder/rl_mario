@@ -97,7 +97,15 @@
       <div class="sidebar-title">Contents</div>
       <nav>
         <ol id="toc">
-          <li><a href="#ch-1">1 · Placeholder</a></li>
+          <li>
+            <a href="#ch-1">1 · The RL loop</a>
+            <ul>
+              <li><a href="#ch-1-loop">The loop</a></li>
+              <li><a href="#ch-1-pieces">The five pieces</a></li>
+              <li><a href="#ch-1-mario">In our Mario run</a></li>
+              <li><a href="#ch-1-question">The question</a></li>
+            </ul>
+          </li>
         </ol>
       </nav>
     </aside>
@@ -108,16 +116,83 @@
           <div class="chapter-header-left">
             <div class="chapter-num">1</div>
             <div class="chapter-title-group">
-              <div class="chapter-label">Placeholder</div>
-              <div class="chapter-title">Scaffold works</div>
+              <div class="chapter-label">The problem</div>
+              <div class="chapter-title">Mario as an RL loop</div>
             </div>
           </div>
           <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M6 9l6 6 6-6"/></svg>
         </div>
         <div class="chapter-body">
-          <p>If you can read this, collapse the chapter by clicking its header,
-          and see math render: $a^2 + b^2 = c^2$ — the scaffold is working.</p>
+          <p>A person sees Super Mario Bros and just&hellip; plays. An algorithm
+          sees a wall of <strong>184,320 pixel numbers</strong> (240&times;256&times;3) that
+          change every frame, and a single number — a <em>reward</em> — trickling
+          back. No rulebook, no labels, no "press jump here." Reinforcement
+          learning is the craft of turning that trickle of reward into skilled
+          behavior. This chapter sets up the problem; the rest of the document
+          builds the algorithm that solves it.</p>
+
+          <h2 class="section-title" id="ch-1-loop">The loop</h2>
+          <p>All of RL is one loop. An <span class="glossary-term">agent</span>
+          and an <span class="glossary-term">environment</span> take turns: the
+          agent picks an action, the environment reacts and hands back a new
+          observation and a reward, forever (or until the episode ends).</p>
+          <div class="diagram-box"><pre>
+        &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472; action a&#8348; &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9484;
+        &#9474;                                  &#9660;
+   &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;            &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;
+   &#9474;     AGENT     &#9474;            &#9474;  ENVIRONMENT  &#9474;
+   &#9474;  (the policy) &#9474;            &#9474;  (the game)   &#9474;
+   &#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;            &#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;
+        &#9650;                                  &#9474;
+        &#9492;&#9472;&#9472; observation s&#8348;&#8330;&#8321;, reward r&#8348; &#9472;&#9472;&#9472;&#9472;&#9472;&#9496;
+          </pre></div>
+          <p class="diagram-caption">The agent&ndash;environment loop. Everything in
+          this document is about making the box on the left better.</p>
+
+          <h2 class="section-title" id="ch-1-pieces">The five pieces</h2>
+          <ul>
+            <li><span class="glossary-term">State / observation</span>
+            <span class="glossary-def">&mdash; what the agent sees right now (the
+            screen).</span></li>
+            <li><span class="glossary-term">Action</span>
+            <span class="glossary-def">&mdash; what it can do (a button press).</span></li>
+            <li><span class="glossary-term">Reward</span>
+            <span class="glossary-def">&mdash; a single number scoring the last
+            action. The <em>only</em> feedback the agent ever gets.</span></li>
+            <li><span class="glossary-term">Policy</span>
+            <span class="glossary-def">&mdash; the agent's strategy: a function
+            $\pi(a \mid s)$ giving the probability of each action in a state. <em>This
+            is the thing we train.</em></span></li>
+            <li><span class="glossary-term">Return</span>
+            <span class="glossary-def">&mdash; the total reward over a whole run,
+            with future reward discounted by $\gamma$ (gamma):</span></li>
+          </ul>
+          <div class="math-block">$$ R = r_0 + \gamma r_1 + \gamma^2 r_2 + \cdots = \sum_{t=0}^{\infty} \gamma^t\, r_t $$</div>
+          <p>The <span class="glossary-term">discount</span> $\gamma \in [0,1)$ makes
+          near-term reward worth more than far-future reward — partly because the
+          future is uncertain, partly to keep the sum finite. The agent's entire
+          goal is to pick actions that maximize the expected return $R$.</p>
+
+          <div class="callout mario" id="ch-1-mario">
+            <span class="callout-label">In our Mario run</span>
+            Every piece is concrete in this project. <strong>State:</strong> 4
+            stacked grayscale 84&times;84 frames (4 frames so motion is visible).
+            <strong>Actions:</strong> the 7 <code>SIMPLE_MOVEMENT</code> moves
+            (right, right+jump, &hellip;) instead of all 256 NES button combos.
+            <strong>Reward:</strong> move-right progress, minus a small time
+            penalty, minus a death penalty — so "good" literally means <em>move
+            right, stay alive, reach the flag</em>. We read progress off
+            <code>x_pos</code> (the flagpole sits near 3160). <strong>Discount:</strong>
+            $\gamma = 0.9$.
+          </div>
+
+          <h2 class="section-title" id="ch-1-question">The question that drives everything</h2>
+          <p>We have a loop, a policy, and a reward. The whole game is:
+          <strong>given only the rewards we observe, how do we change the policy so
+          it earns more of them?</strong> The next chapter gives the foundational
+          answer — and every chapter after it fixes a problem the previous answer
+          created, until we arrive at PPO.</p>
         </div>
       </section>
     </main>
