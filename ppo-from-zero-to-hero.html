@@ -169,6 +169,15 @@
               <li><a href="#ch-8-example">Worked example: two runs</a></li>
             </ul>
           </li>
+          <li>
+            <a href="#ch-9">9 · Does it generalize?</a>
+            <ul>
+              <li><a href="#ch-9-specialist">The 1-1 specialist</a></li>
+              <li><a href="#ch-9-31">Will 1-1…2-4 beat 3-1?</a></li>
+              <li><a href="#ch-9-cures">How to fight overfitting</a></li>
+              <li><a href="#ch-9-mario">In our Mario run</a></li>
+            </ul>
+          </li>
         </ol>
       </nav>
     </aside>
@@ -176,10 +185,11 @@
     <main class="container" id="chapters">
       <div class="callout" id="intro">
         <span class="callout-label">How to read this</span>
-        Eight chapters, each solving the problem the previous one created. We
-        start from the bare RL loop, reach PPO's clipped objective by Chapter 5
-        (the summit), then put it to work and learn to <em>read</em> and
-        <em>rescue</em> real training runs. It's <strong>intuition-first</strong>:
+        Nine chapters. The first five build PPO from the bare RL loop up to its
+        clipped objective (Chapter 5, the summit); the rest put it to work and
+        teach the practitioner skills — <em>reading</em> a run, <em>rescuing</em> a
+        stuck one, and judging whether it actually <em>generalizes</em>. It's
+        <strong>intuition-first</strong>:
         every idea gets a picture and a plain-English explanation before any
         equation, and each is anchored in this project's real Super Mario Bros
         agent (the orange boxes).
@@ -921,6 +931,108 @@ model.learn(total_timesteps=4_000_000)   # runs collect&#8594;estimate&#8594;upd
             the planned "Stage 04." The same levers above are your toolkit there —
             and you now understand <em>why</em> each one works, all the way down from
             policy gradients.
+          </div>
+        </div>
+      </section>
+      <section class="chapter" id="ch-9">
+        <div class="chapter-header">
+          <div class="chapter-header-left">
+            <div class="chapter-num">9</div>
+            <div class="chapter-title-group">
+              <div class="chapter-label">Hero skill #3</div>
+              <div class="chapter-title">Does it generalize?</div>
+            </div>
+          </div>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="chapter-body">
+          <p>You trained an agent that beats World 1-1. Point it at World 1-2 and it
+          dies almost immediately. That's not a bug — it's the deepest practical
+          lesson in the whole field, and the last hero skill: knowing the difference
+          between <em>memorizing one environment</em> and <em>learning a general
+          skill</em>.</p>
+
+          <h2 class="section-title" id="ch-9-specialist">The 1-1 specialist</h2>
+          <p>Here's the trap. The input format isn't the problem — a 1-2 frame is the
+          same 84×84×4 stack, it fits the network fine. The problem is that the policy
+          <strong>overfit to World 1-1</strong>. It never learned an abstract idea of
+          "platforming"; it learned a near-memorized route: <em>"when I see <strong>these</strong>
+          pixels — 1-1's exact pipes, gaps, and Goombas — press <strong>these</strong>
+          buttons."</em> World 1-2 (underground theme, new layout, new hazards) breaks
+          every pixel-pattern that route relied on. The states are
+          <span class="glossary-term">out of distribution</span> — outside anything it
+          trained on — and neural nets extrapolate badly off-distribution: the policy
+          stays confident while being completely wrong.</p>
+          <div class="callout">
+            <span class="callout-label">The core tension</span>
+            Training and testing on the <em>same</em> level measures memorization, not
+            skill. Real generalization is performance on levels the agent has
+            <strong>never seen</strong> — and that's a much higher bar.
+          </div>
+
+          <h2 class="section-title" id="ch-9-31">"If I train on 1-1 … 2-4, will it beat 3-1?"</h2>
+          <p>Better than the specialist — but probably not reliably. The honest
+          breakdown:</p>
+          <ul>
+            <li><strong>More levels helps, a lot.</strong> Training on ~8 levels means
+            the policy <em>can't</em> just memorize one layout, so it's pushed toward
+            transferable skills ("jump gaps," "the flag is rightward"). Right
+            direction.</li>
+            <li><strong>3-1 is type-familiar.</strong> It's an overworld level, and
+            your training set already has overworld levels (1-1, 2-1) — same theme and
+            physics. So 3-1 is far less alien than, say, an underwater level would be.
+            Expect <em>real progress</em>.</li>
+            <li><strong>But 8 levels is still very few.</strong> Generalization research
+            (Procgen, CoinRun) finds you typically need <em>dozens to hundreds</em> of
+            training levels before unseen ones are cleared reliably. With 8, the policy
+            still partly memorizes, and 3-1 has a unique layout it never saw.</li>
+          </ul>
+          <p><strong>Verdict:</strong> noticeably better than a 1-1-only agent, likely
+          partial progress on 3-1, but "beats an unseen 3-1 reliably" is a stretch from
+          only 8 levels.</p>
+          <div class="diagram-box"><pre>
+   TRAIN ON ONE LEVEL (1-1):
+       policy can just memorize 1-1's layout
+          1-1 ──► great       1-2 ──► dies        3-1 ──► dies
+
+   TRAIN ON MANY VARIED LEVELS (1-1 … 2-4, a random one each episode):
+       can't memorize them all ──► forced to learn transferable skills
+          seen levels ──► good    unseen 3-1 ──► partial (better odds, not a lock)
+          </pre></div>
+          <p class="diagram-caption">The more (and more varied) the training levels, the
+          less the policy can memorize — and the better it transfers to ones it never saw.</p>
+
+          <h2 class="section-title" id="ch-9-cures">How to fight overfitting</h2>
+          <p>Every cure is a way to stop the policy from memorizing and force it to
+          learn something general:</p>
+          <ol>
+            <li><strong>Train on many, diverse levels</strong> (domain randomization).
+            The single biggest lever — sample a different level each episode so no
+            single layout can be memorized.</li>
+            <li><strong>Randomize the situation:</strong> random start positions, random
+            level order, so the agent can't rely on a fixed sequence.</li>
+            <li><strong>Observation augmentation:</strong> small random crops, shifts, or
+            color/brightness jitter on the frames (the RAD / DrQ techniques). The agent
+            learns features robust to nuisance changes instead of exact pixels.</li>
+            <li><strong>Regularization:</strong> the entropy bonus (<code>ent_coef</code>),
+            weight decay, dropout — discourage over-confident, brittle policies.</li>
+            <li><strong>Curriculum:</strong> start on a few levels, add harder/more
+            varied ones as it improves.</li>
+            <li><strong>Always test on held-out levels.</strong> Keep some levels out of
+            training and measure on those — it's the only honest gauge of generalization
+            (training-level score will happily lie to you).</li>
+          </ol>
+
+          <div class="callout mario" id="ch-9-mario">
+            <span class="callout-label">In our Mario run</span>
+            Our project trains a <strong>1-1 specialist</strong> on purpose — it's the
+            achievable first goal, and "beat the whole game" was filed as the hard
+            <em>stretch</em> goal precisely because it demands generalization.
+            <code>gym-super-mario-bros</code> ships a random-stages mode that samples
+            levels each episode — the natural next experiment (Stage 04+) — paired with
+            a held-out level to measure whether the agent is learning Mario, or just
+            memorizing 1-1.
           </div>
         </div>
       </section>
