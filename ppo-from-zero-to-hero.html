@@ -147,6 +147,7 @@
               <li><a href="#ch-6-loop">The full loop</a></li>
               <li><a href="#ch-6-knobs">The knobs</a></li>
               <li><a href="#ch-6-code">In code</a></li>
+              <li><a href="#ch-6-result">What you get out</a></li>
               <li><a href="#ch-6-mario">In our Mario run</a></li>
             </ul>
           </li>
@@ -669,6 +670,45 @@ model = PPO("CnnPolicy", venv, n_steps=512, n_epochs=4,
             clip_range=0.1, gamma=0.9, gae_lambda=0.95,
             ent_coef=0.01, ...)
 model.learn(total_timesteps=4_000_000)   # runs collect&#8594;estimate&#8594;update</code></pre>
+
+          <h2 class="section-title" id="ch-6-result">What you get out: the trained policy</h2>
+          <p>When all those hours finish, the entire result is <strong>one saved
+          file</strong> — here, <code>checkpoints/ppo_mario.zip</code>. Inside it are
+          the trained network <em>weights</em>, above all the <strong>policy
+          network</strong>: the CNN that turns a screen into action probabilities.
+          That's what the training tuned, and that file <em>is</em> the learned
+          strategy.</p>
+          <p>Using it is a completely different mode from training:
+          <strong>playing is just forward passes, with nothing learning.</strong>
+          The weights are frozen; there's no reward and no update. Every frame you
+          run the same RL loop from Chapter 1, but the policy is now the trained
+          network: look at the screen, run it through the network, press the button
+          it suggests.</p>
+          <div class="diagram-box"><pre>
+   TRAINING  (slow — runs once)
+       repeat millions of times:
+           screen ─► policy ─► action ─► reward ─► UPDATE the weights
+       then save the result:
+           checkpoints/ppo_mario.zip          (the trained weights)
+
+   PLAYING  (fast — every frame; just load that file)
+       repeat every frame, forever:
+           screen ─► policy ─► action     (weights FROZEN: no reward, no update)
+          </pre></div>
+          <p class="diagram-caption">Train once to learn the weights; then run those
+          frozen weights forward, frame after frame, to actually play.</p>
+          <p>Two things worth knowing about that file:</p>
+          <ul>
+            <li><strong>The critic is along for the ride, unused.</strong> The value
+            network $V(s)$ from Chapter 3 was only a <em>training aid</em> (the
+            baseline). To <em>act</em>, you only need the actor — the policy. At play
+            time the critic is ignored.</li>
+            <li><strong>The preprocessing must match exactly.</strong> The policy only
+            understands grayscale 84×84 four-frame stacks, because that's all it ever
+            saw. Feed it raw frames and it's blind — which is why the same env wrapper
+            (<code>make_mario_env(preprocess=True)</code>) is used for both training
+            and playing.</li>
+          </ul>
 
           <div class="callout mario" id="ch-6-mario">
             <span class="callout-label">In our Mario run</span>
