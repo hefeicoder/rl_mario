@@ -132,6 +132,15 @@
               <li><a href="#ch-4-mario">In our Mario run</a></li>
             </ul>
           </li>
+          <li>
+            <a href="#ch-5">5 · PPO: the clip</a>
+            <ul>
+              <li><a href="#ch-5-ratio">The probability ratio</a></li>
+              <li><a href="#ch-5-clip">The clipped objective</a></li>
+              <li><a href="#ch-5-picture">Why the picture works</a></li>
+              <li><a href="#ch-5-mario">In our Mario run</a></li>
+            </ul>
+          </li>
         </ol>
       </nav>
     </aside>
@@ -427,6 +436,85 @@
             this "how far did the policy move this update" measure. We watch it as a
             stability gauge: a sudden spike means an update was too aggressive. PPO,
             next chapter, is what keeps it small without TRPO's complexity.
+          </div>
+        </div>
+      </section>
+      <section class="chapter" id="ch-5">
+        <div class="chapter-header">
+          <div class="chapter-header-left">
+            <div class="chapter-num">5</div>
+            <div class="chapter-title-group">
+              <div class="chapter-label">The summit</div>
+              <div class="chapter-title">PPO: the clip that changed everything</div>
+            </div>
+          </div>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="chapter-body">
+          <p>Everything so far has been a setup. We have a clean learning direction
+          (advantage, Ch 3) and a clear danger (steps that are too big, Ch 4). PPO
+          is the idea that earns "don't move too far" with a single, almost
+          embarrassingly simple change to the objective — no second-order math, no
+          hard constraint. This is the whole point of the document.</p>
+
+          <h2 class="section-title" id="ch-5-ratio">First, the probability ratio</h2>
+          <p>To talk about "how much the policy changed," PPO looks at one number
+          per action — the <span class="glossary-term">ratio</span> of how likely
+          the new policy is to take that action versus the old one:</p>
+          <div class="math-block">$$ r(\theta) = \frac{\pi_\theta(a \mid s)}{\pi_{\theta_{\text{old}}}(a \mid s)} $$</div>
+          <p>$r = 1$ means "unchanged." $r = 1.3$ means the new policy is 30% more
+          likely to take this action; $r = 0.7$ means 30% less. The ratio <em>is</em>
+          the "how far did we move" signal, measured action by action.</p>
+
+          <h2 class="section-title" id="ch-5-clip">The clipped objective</h2>
+          <p>Naively, we'd maximize $r(\theta)\,A$ — push the ratio up for
+          good-advantage actions. But that's exactly what walks off the cliff:
+          nothing stops $r$ from ballooning. PPO's fix is to <strong>clip the ratio
+          and keep the worse of the two</strong>:</p>
+          <div class="math-block">$$ L(\theta) = \mathbb{E}\Big[\, \min\big(\, r(\theta)\,A,\;\; \operatorname{clip}(r(\theta),\, 1-\epsilon,\, 1+\epsilon)\,A \,\big) \Big] $$</div>
+          <p>That $\operatorname{clip}$ just means "don't let $r$ leave the band
+          $[1-\epsilon,\, 1+\epsilon]$." With $\epsilon = 0.1$, the policy is never
+          rewarded for moving any single action's probability more than 10% per
+          update. The trust region — for free, with plain gradient descent.</p>
+
+          <h2 class="section-title" id="ch-5-picture">Why it works — a picture, not a proof</h2>
+          <p>The $\min$ looks fiddly until you draw it. Think about one action with
+          a <strong>good</strong> advantage ($A > 0$), and ask how the objective
+          rewards moving its probability:</p>
+          <div class="diagram-box"><pre>
+   objective
+   (A &gt; 0)
+        &#9650;
+        &#9474;            ____________   &#8592; past 1+&#949;: FLAT.
+        &#9474;           /                  no more reward for
+        &#9474;          /                   pushing this action.
+        &#9474;_________/
+        &#9474;        |
+        &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9532;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#8594; ratio r
+              1   1+&#949;
+
+   good action: reward rises as you make it likelier, then STOPS at 1+&#949;.
+   bad action (A &lt; 0): mirror image &#8212; no reward for shoving it past 1&#8211;&#949;.
+          </pre></div>
+          <p class="diagram-caption">The clip flattens the objective once the policy
+          has moved "far enough," removing any incentive to overshoot. That flat
+          line is the entire trick.</p>
+          <p>So a good action gets more likely — but only up to a point, then the
+          gradient goes to zero and the update stops pushing. A bad action gets less
+          likely, with the same brake in the other direction. No constraint solver,
+          no KL penalty to tune — just <code>min</code> and <code>clip</code>. That's
+          why PPO took over: <strong>TRPO's stability at a fraction of the
+          complexity</strong>, and it plays nicely with ordinary minibatch SGD.</p>
+
+          <div class="callout mario" id="ch-5-mario">
+            <span class="callout-label">In our Mario run</span>
+            You can <em>watch the clip fire</em>: <code>train/clip_fraction</code>
+            (~0.3 in our run) is the fraction of sampled actions whose ratio hit the
+            $1\pm\epsilon$ band and got clipped. We set $\epsilon$ via
+            <code>clip_range = 0.1</code> in <code>src/config.py</code>. A healthy
+            <code>clip_fraction</code> means the brake is engaging on the right
+            number of updates — not too loose, not strangling learning.
           </div>
         </div>
       </section>
