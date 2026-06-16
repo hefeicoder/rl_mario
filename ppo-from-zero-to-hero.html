@@ -408,12 +408,35 @@
           <p class="diagram-caption">Subtracting the baseline turns "everything was
           positive, who knows which mattered" into a clean better/worse signal.</p>
 
-          <h2 class="section-title" id="ch-3-ac">Actor-critic, and the GAE knob</h2>
-          <p>But where does $V(s)$ come from? We learn it too, with a second network
-          (or a second head). This is the <span class="glossary-term">actor-critic</span>
-          setup: the <strong>actor</strong> is the policy $\pi$, the <strong>critic</strong>
-          is the value estimate $V$. The critic judges; the actor improves based on
-          the judgement.</p>
+          <h2 class="section-title" id="ch-3-ac">Where the baseline comes from</h2>
+          <p>But who decides $V(s)$ is "+30 here"? <strong>Nobody — the critic learns
+          it from experience</strong>, by ordinary regression. We add a second network,
+          $V(s)$, and train it on the very rollouts we already collected: for each
+          state the agent visited, the <em>target</em> is the <em>actual return that
+          followed</em>, and the loss is simply</p>
+          <div class="math-block">$$ \text{critic loss} = \big(\, V(s) - R \,\big)^2 $$</div>
+          <p>Predict the return, compare to what really happened, nudge — repeat. Over
+          thousands of episodes the critic converges to the <em>average return it
+          observes</em> from each state. So if the agent keeps ending up with ~30
+          return from some spot, $V(s)$ drifts to ~30 on its own. The "+30 baseline"
+          was never set by hand; <strong>it's just the critic reporting what it has
+          seen.</strong></p>
+          <div class="diagram-box"><pre>
+   state s ──► [ CRITIC ] ──► V(s) = +30      ("what's normal here?")
+
+   actual return R = +52
+        │
+        ├── R - V(s) = +22    ──►  ADVANTAGE: tell the ACTOR to push this action up
+        └── V(s) was too low  ──►  train the CRITIC: raise V(s) toward the real +52
+          </pre></div>
+          <p class="diagram-caption">The critic learns the baseline by regressing on
+          real returns; the leftover difference (the advantage) trains the actor.</p>
+          <p>This pairing is the <span class="glossary-term">actor-critic</span> setup:
+          the <strong>actor</strong> is the policy $\pi$ (it acts), the
+          <strong>critic</strong> is the value network $V$ (it judges). The actor
+          generates experience, the critic learns "what's normal" from it, and the
+          advantage hands the actor a clean signal — round after round, each makes the
+          other's job easier.</p>
           <p>One more refinement you'll see named in configs:
           <span class="glossary-term">GAE</span> (generalized advantage estimation).
           It's a dial, $\lambda$, for <em>how</em> you estimate the advantage —
