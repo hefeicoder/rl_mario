@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PPO from 0 to Hero — Study Notes</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+        crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"
+          crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          crossorigin="anonymous"
+          onload="renderMathInElement(document.body, {
+            delimiters: [
+              {left: '$$', right: '$$', display: true},
+              {left: '$',  right: '$',  display: false}
+            ], throwOnError: false });"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+           background: #f5f5f5; color: #1a1a1a; line-height: 1.65; padding: 40px 20px 80px; }
+    .page-title { text-align: center; font-size: 1.5rem; font-weight: 700; margin-bottom: 6px; color: #111; }
+    .page-subtitle { text-align: center; font-size: 0.9rem; color: #777; margin-bottom: 32px;
+           max-width: 640px; margin-left: auto; margin-right: auto; }
+    .layout { display: flex; align-items: flex-start; max-width: 1180px; margin: 0 auto; gap: 28px; }
+    .sidebar { flex: 0 0 256px; position: sticky; top: 24px; max-height: calc(100vh - 48px);
+               overflow-y: auto; background: #fff; border-radius: 14px;
+               box-shadow: 0 1px 4px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06); padding: 18px; }
+    .sidebar-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .1em;
+                     color: #888; font-weight: 700; margin-bottom: 14px; }
+    .sidebar nav ol { list-style: none; padding: 0; margin: 0; }
+    .sidebar nav > ol > li { margin-bottom: 4px; }
+    .sidebar nav > ol > li > a { display: block; font-weight: 700; color: #1a1a1a;
+        text-decoration: none; padding: 5px 0; line-height: 1.35; font-size: 0.85rem; }
+    .sidebar nav > ol > li > a:hover, .sidebar nav > ol > li > a.active { color: #1d7a45; }
+    .sidebar nav ul { list-style: none; padding: 2px 0 6px; margin: 0; }
+    .sidebar nav ul li a { display: block; padding: 3px 0 3px 12px; color: #777;
+        text-decoration: none; font-size: 0.79rem; line-height: 1.4; border-left: 2px solid #eee; }
+    .sidebar nav ul li a:hover { color: #1a1a1a; border-left-color: #bbb; }
+    .sidebar nav ul li a.active { color: #1d7a45; border-left-color: #1d7a45; font-weight: 600; }
+    html { scroll-behavior: smooth; }
+    .chapter, .section-title[id] { scroll-margin-top: 18px; }
+    .container { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+    .chapter { background: #fff; border-radius: 14px;
+        box-shadow: 0 1px 4px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06); overflow: hidden; }
+    .chapter-header { display: flex; align-items: center; justify-content: space-between;
+        padding: 20px 24px; cursor: pointer; user-select: none; }
+    .chapter-header-left { display: flex; align-items: center; gap: 16px; }
+    .chapter-num { display: flex; align-items: center; justify-content: center; width: 40px;
+        height: 40px; background: #1a1a1a; color: #fff; font-weight: 700; font-size: 1rem;
+        border-radius: 8px; flex-shrink: 0; }
+    .chapter-title-group { display: flex; flex-direction: column; gap: 2px; }
+    .chapter-title { font-size: 1.05rem; font-weight: 700; color: #111; }
+    .chapter-label { font-size: 0.68rem; font-weight: 700; letter-spacing: .1em;
+        text-transform: uppercase; color: #1d7a45; }
+    .chevron { width: 18px; height: 18px; flex-shrink: 0; transition: transform .2s; color: #999; }
+    .chapter.collapsed .chevron { transform: rotate(-90deg); }
+    .chapter-body { padding: 0 24px 24px; }
+    .chapter.collapsed .chapter-body { display: none; }
+    .chapter-body p { margin: 12px 0; }
+    .chapter-body ul, .chapter-body ol { margin: 12px 0 12px 22px; }
+    .chapter-body li { margin: 5px 0; }
+    .section-title { font-size: 1rem; font-weight: 700; color: #111; margin: 26px 0 8px; }
+    .diagram-box { background: #1a1a1a; color: #e8e8e8; border-radius: 10px; padding: 18px 20px;
+        margin: 16px 0 6px; overflow-x: auto; }
+    .diagram-box pre { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 0.8rem;
+        line-height: 1.5; white-space: pre; }
+    .diagram-caption { font-size: 0.8rem; color: #777; margin: 4px 0 16px; font-style: italic; }
+    .math-block { background: #fafafa; border: 1px solid #eee; border-radius: 10px;
+        padding: 14px 18px; margin: 16px 0; overflow-x: auto; }
+    .callout { background: #f3f9f5; border-left: 3px solid #1d7a45; border-radius: 0 8px 8px 0;
+        padding: 12px 16px; margin: 16px 0; font-size: 0.92rem; }
+    .callout.mario { background: #fdf6f0; border-left-color: #e07b39; }
+    .callout-label { display: block; font-size: 0.66rem; font-weight: 700; letter-spacing: .1em;
+        text-transform: uppercase; color: #1d7a45; margin-bottom: 4px; }
+    .callout.mario .callout-label { color: #e07b39; }
+    .code-block { background: #1a1a1a; color: #e8e8e8; border-radius: 10px; padding: 14px 18px;
+        margin: 16px 0; overflow-x: auto; font-family: "SF Mono", Menlo, Consolas, monospace;
+        font-size: 0.8rem; line-height: 1.5; white-space: pre; }
+    .glossary-term { font-weight: 700; color: #1d7a45; }
+    .glossary-def { color: #444; }
+    figure { margin: 16px 0; }
+    figure img { max-width: 100%; border-radius: 10px; border: 1px solid #eee; display: block; }
+    figure figcaption { font-size: 0.8rem; color: #777; margin-top: 6px; font-style: italic; }
+    @media (max-width: 900px) {
+      .layout { flex-direction: column; gap: 0; }
+      .sidebar { position: static; flex: none; width: 100%; max-height: none; margin-bottom: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-title">PPO from 0 to Hero</div>
+  <div class="page-subtitle">An intuition-first tour of Proximal Policy Optimization, taught through a Super Mario Bros agent</div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-title">Contents</div>
+      <nav>
+        <ol id="toc">
+          <li><a href="#ch-1">1 · Placeholder</a></li>
+        </ol>
+      </nav>
+    </aside>
+
+    <main class="container" id="chapters">
+      <section class="chapter" id="ch-1">
+        <div class="chapter-header">
+          <div class="chapter-header-left">
+            <div class="chapter-num">1</div>
+            <div class="chapter-title-group">
+              <div class="chapter-label">Placeholder</div>
+              <div class="chapter-title">Scaffold works</div>
+            </div>
+          </div>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="chapter-body">
+          <p>If you can read this, collapse the chapter by clicking its header,
+          and see math render: $a^2 + b^2 = c^2$ — the scaffold is working.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // Collapse/expand a chapter when its header is clicked.
+    document.querySelectorAll(".chapter-header").forEach(function (h) {
+      h.addEventListener("click", function () {
+        h.parentElement.classList.toggle("collapsed");
+      });
+    });
+    // Highlight the sidebar link for the chapter/section currently in view.
+    var links = {};
+    document.querySelectorAll(".sidebar a").forEach(function (a) {
+      links[a.getAttribute("href").slice(1)] = a;
+    });
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting && links[e.target.id]) {
+          document.querySelectorAll(".sidebar a.active").forEach(function (x) {
+            x.classList.remove("active");
+          });
+          links[e.target.id].classList.add("active");
+        }
+      });
+    }, { rootMargin: "-10% 0px -80% 0px" });
+    document.querySelectorAll(".chapter, .section-title[id]").forEach(function (el) {
+      observer.observe(el);
+    });
+  </script>
+</body>
+</html>
