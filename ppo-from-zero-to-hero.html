@@ -173,6 +173,16 @@
     </aside>
 
     <main class="container" id="chapters">
+      <div class="callout" id="intro">
+        <span class="callout-label">How to read this</span>
+        Eight chapters, each solving the problem the previous one created. We
+        start from the bare RL loop, reach PPO's clipped objective by Chapter 5
+        (the summit), then put it to work and learn to <em>read</em> and
+        <em>rescue</em> real training runs. It's <strong>intuition-first</strong>:
+        every idea gets a picture and a plain-English explanation before any
+        equation, and each is anchored in this project's real Super Mario Bros
+        agent (the orange boxes).
+      </div>
       <section class="chapter" id="ch-1">
         <div class="chapter-header">
           <div class="chapter-header-left">
@@ -252,7 +262,7 @@
           <h2 class="section-title" id="ch-1-question">The question that drives everything</h2>
           <p>We have a loop, a policy, and a reward. The whole game is:
           <strong>given only the rewards we observe, how do we change the policy so
-          it earns more of them?</strong> The next chapter gives the foundational
+          it earns more of them?</strong> <a href="#ch-2">The next chapter</a> gives the foundational
           answer — and every chapter after it fixes a problem the previous answer
           created, until we arrive at PPO.</p>
         </div>
@@ -319,9 +329,10 @@
           learning crawls.</p>
           <div class="callout">
             <span class="callout-label">Where we're headed</span>
-            Chapter 3 attacks this noise (better credit assignment). Chapter 4
-            attacks a second problem — updates that are too big. Chapter 5 is PPO,
-            which solves the second problem with one clean trick.
+            <a href="#ch-3">Chapter 3</a> attacks this noise (better credit
+            assignment). <a href="#ch-4">Chapter 4</a> attacks a second problem —
+            updates that are too big. <a href="#ch-5">Chapter 5</a> is PPO, which
+            solves the second problem with one clean trick.
           </div>
 
           <div class="callout mario" id="ch-2-mario">
@@ -454,7 +465,7 @@
           <p>TRPO works and was a milestone. The downside: enforcing that constraint
           exactly involves heavy machinery (second-order optimization) that's
           fiddly to implement and slow to run. Which sets up the obvious question —
-          the one PPO answers: <strong>could we get this same "don't move too far"
+          <a href="#ch-5">the one PPO answers</a>: <strong>could we get this same "don't move too far"
           safety with something far simpler?</strong></p>
 
           <div class="callout mario" id="ch-4-mario">

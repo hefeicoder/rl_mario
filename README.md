@@ -330,6 +330,9 @@ comparable across runs.
 
 ## 11. References & further reading
 
+- **PPO from 0 to Hero** — an intuition-first PPO tutorial built on this
+  project's Mario agent, in 8 illustrated chapters:
+  [`ppo-from-zero-to-hero.html`](ppo-from-zero-to-hero.html)
 - **Sutton & Barto, *Reinforcement Learning: An Introduction*** — the canonical
   textbook (free online): http://incompleteideas.net/book/the-book.html
 - **DQN** — Mnih et al., *Human-level control through deep reinforcement
