@@ -159,6 +159,15 @@
               <li><a href="#ch-7-mario">In our Mario run</a></li>
             </ul>
           </li>
+          <li>
+            <a href="#ch-8">8 · When it gets stuck</a>
+            <ul>
+              <li><a href="#ch-8-diagnose">Stuck or just slow?</a></li>
+              <li><a href="#ch-8-levers">The escape levers</a></li>
+              <li><a href="#ch-8-flow">A decision flowchart</a></li>
+              <li><a href="#ch-8-example">Worked example: two runs</a></li>
+            </ul>
+          </li>
         </ol>
       </nav>
     </aside>
@@ -701,6 +710,124 @@ model.learn(total_timesteps=4_000_000)   # runs collect&#8594;estimate&#8594;upd
             up. The win rate sitting at 0 while <code>max_x_pos</code> climbs is the
             expected early picture — the flag only gets reached once the agent can
             run nearly the whole level.
+          </div>
+        </div>
+      </section>
+      <section class="chapter" id="ch-8">
+        <div class="chapter-header">
+          <div class="chapter-header-left">
+            <div class="chapter-num">8</div>
+            <div class="chapter-title-group">
+              <div class="chapter-label">Hero skill #2</div>
+              <div class="chapter-title">When training gets stuck</div>
+            </div>
+          </div>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="chapter-body">
+          <p>This is the chapter that separates "I ran PPO once" from "I can get PPO
+          to work." Sooner or later your agent stops improving — the curve goes
+          flat. The real skill is knowing whether to <em>wait</em> or
+          <em>intervene</em>, and which lever to pull. We learned this one the hard
+          way on Mario, so the example at the end is the real thing.</p>
+
+          <h2 class="section-title" id="ch-8-diagnose">First question: stuck, or just slow?</h2>
+          <p>A flat curve is not automatically a problem — RL plateaus constantly
+          (Chapter 7). Before touching anything, tell the two apart:</p>
+          <ul>
+            <li><strong>Just slow (wait):</strong> entropy is still healthy (the
+            policy hasn't gone fully deterministic), <code>max_x_pos</code>
+            occasionally poke upward, and the agent is clearly still <em>trying</em>
+            things. It's grinding through a hard section.</li>
+            <li><strong>Genuinely stuck (intervene):</strong> entropy has collapsed
+            toward zero, the curve is dead flat for a long stretch (hundreds of
+            thousands of steps), and <code>approx_kl</code> is tiny — the policy has
+            stopped changing. It has settled into a local optimum and won't leave on
+            its own.</li>
+          </ul>
+          <p><strong>Then diagnose before you tune.</strong> The single most useful
+          move: <em>watch the agent play</em> and see <em>where</em> it dies — a
+          specific pipe? a pit it won't jump? That tells you whether you have an
+          exploration problem or something else, far better than staring at curves.</p>
+
+          <h2 class="section-title" id="ch-8-levers">The escape levers, in order</h2>
+          <p>Reach for these roughly top to bottom — cheapest and most common first:</p>
+          <ol>
+            <li><strong>Patience / more steps.</strong> The most underrated fix. Many
+            "stuck" runs just needed longer — see the example below.</li>
+            <li><strong>Exploration (<code>ent_coef</code>).</strong> Raise the
+            entropy bonus so the policy keeps trying new actions and can stumble onto
+            the escape. The first real knob for a genuine plateau.</li>
+            <li><strong>Horizon (<code>gamma</code>).</strong> Raise it (e.g. 0.9 &#8594;
+            0.99) when success needs valuing a <em>delayed</em> payoff — a running
+            jump that sacrifices immediate progress for reward on the far side.</li>
+            <li><strong>Learning rate / <code>clip_range</code>.</strong> Lower them
+            if training is <em>unstable</em> (climbs then collapses) rather than
+            merely stuck.</li>
+            <li><strong>Reward shaping.</strong> Add your own bonuses to point the
+            agent at what matters, when the built-in reward is too sparse.</li>
+            <li><strong>Curriculum.</strong> Start on an easier version of the task
+            and ramp difficulty — the heaviest lever, for genuinely hard problems.</li>
+          </ol>
+
+          <h2 class="section-title" id="ch-8-flow">A decision flowchart</h2>
+          <div class="diagram-box"><pre>
+   curve went flat
+        &#9474;
+        &#9660;
+   entropy collapsed?  &#9472;&#9472;no&#9472;&#9472;&#9658;  probably just SLOW &#8594; wait / more steps
+        &#9474; yes
+        &#9660;
+   watch it play: where does it die?
+        &#9474;
+        &#9500;&#9472; stuck at an obstacle, never varies  &#9472;&#9472;&#9658;  raise ent_coef (explore)
+        &#9500;&#9472; needs a risky delayed-payoff move   &#9472;&#9472;&#9658;  raise gamma (horizon)
+        &#9500;&#9472; climbs then COLLAPSES, kl spikes    &#9472;&#9472;&#9658;  lower lr / clip_range
+        &#9492;&#9472; reward too sparse to guide it        &#9472;&#9472;&#9658;  reward shaping / curriculum
+          </pre></div>
+          <p class="diagram-caption">Stuck? &#8594; check entropy &#8594; watch where it dies
+          &#8594; pick the matching lever.</p>
+
+          <h2 class="section-title" id="ch-8-example">Worked example: two real runs, two outcomes</h2>
+          <p>Here is the lesson in one picture from this project. Two PPO runs on
+          World 1-1, both hitting the same wall around <code>x_pos</code> ≈ 800–900:</p>
+          <div class="diagram-box"><pre>
+   max_x_pos
+   1600 &#9474;                                   _.&#8226;&#180;   PPO_3
+        &#9474;                              _.&#8226;&#180;&#180;       (broke out!)
+   1200 &#9474;                         _.&#8226;&#180;
+        &#9474;                    _.&#8226;&#180;
+    900 &#9474;   .&#8226;&#8212;&#8226;&#8212;&#8226;&#8212;&#8226;&#8212;&#8226;&#8212;&#8226;&#8226;&#180;&#8212;&#8212;&#8226;&#8212;&#8226;&#8212;&#8226;&#8212;&#8226;&#8212;&#8226;&#8212;&#8226;&#8212;&#8226;  baseline (stuck ~895)
+        &#9474; .&#180;        &#8593;              &#8593;
+        &#9474;.&#180;     both plateau     PPO_3 breaks out ~320k,
+        &#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#8594; steps
+        0       100k    200k    300k    400k    500k
+          </pre></div>
+          <p class="diagram-caption">Same wall, opposite endings. The contrast is the
+          whole lesson.</p>
+          <figure>
+            <img src="images/plateau_breakout.png" alt="TensorBoard: PPO_3 breaks out of the plateau while the baseline stays stuck"
+                 onerror="this.closest('figure').style.display='none'">
+            <figcaption>The real TensorBoard capture: PPO_3 (pink) vs. the stuck
+            baseline (orange).</figcaption>
+          </figure>
+          <p><strong>PPO_3</strong> sat at ~800–850 from 100k to 300k steps — the
+          exact plateau that looks like failure — then <strong>broke out on its own
+          around 320k</strong> and climbed to ~1,610 by 598k. No tuning. It just
+          needed patience (lever #1). Meanwhile <code>ppo_1M_baseline_1</code> hit
+          the same wall and <strong>stayed flat at ~895</strong> — a genuinely stuck
+          run that <em>would</em> have needed intervention.</p>
+          <p>That's the judgment this chapter is teaching: a plateau is not a verdict.
+          Check entropy, watch where it dies, and decide — sometimes the right move
+          is to <em>wait</em>, and sometimes it's to reach for a lever. Knowing which
+          is the difference.</p>
+          <div class="callout">
+            <span class="callout-label">Where to go next</span>
+            In this project, systematic tuning and reward-shaping experiments are
+            the planned "Stage 04." The same levers above are your toolkit there —
+            and you now understand <em>why</em> each one works, all the way down from
+            policy gradients.
           </div>
         </div>
       </section>
