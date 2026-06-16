@@ -150,6 +150,15 @@
               <li><a href="#ch-6-mario">In our Mario run</a></li>
             </ul>
           </li>
+          <li>
+            <a href="#ch-7">7 · Reading a healthy run</a>
+            <ul>
+              <li><a href="#ch-7-metrics">The metrics that matter</a></li>
+              <li><a href="#ch-7-shape">The shape of learning</a></li>
+              <li><a href="#ch-7-eval">Stochastic vs deterministic</a></li>
+              <li><a href="#ch-7-mario">In our Mario run</a></li>
+            </ul>
+          </li>
         </ol>
       </nav>
     </aside>
@@ -605,6 +614,93 @@ model.learn(total_timesteps=4_000_000)   # runs collect&#8594;estimate&#8594;upd
             M1 Max, and why training is <strong>emulator-bound on the CPU</strong>,
             not GPU-bound — the bottleneck is stepping 8 NES emulators, not the tiny
             CNN. It's also why a 4-million-step run takes ~5.4 hours here.
+          </div>
+        </div>
+      </section>
+      <section class="chapter" id="ch-7">
+        <div class="chapter-header">
+          <div class="chapter-header-left">
+            <div class="chapter-num">7</div>
+            <div class="chapter-title-group">
+              <div class="chapter-label">Hero skill #1</div>
+              <div class="chapter-title">Reading a healthy run</div>
+            </div>
+          </div>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="chapter-body">
+          <p>Anyone can call <code>model.learn()</code>. The skill that separates
+          "ran PPO" from "understands PPO" is reading the curves while it trains —
+          knowing what healthy looks like, so you can tell when it isn't. Here's how
+          we read our Mario runs in TensorBoard.</p>
+
+          <h2 class="section-title" id="ch-7-metrics">The metrics that matter, in three groups</h2>
+          <ul>
+            <li><strong>Progress</strong> &mdash; <code>mario/flag_rate</code> (our
+            win rate; pinned at 0 until the agent can run most of the level) and
+            <code>mario/max_x_pos</code> (how far right it gets, climbing toward the
+            flagpole at ~3160).</li>
+            <li><strong>Behavior</strong> &mdash; <code>rollout/ep_rew_mean</code>
+            (overall reward) and <code>rollout/ep_len_mean</code> (episode length).
+            A lovely tell: episode length <em>rising then falling</em> means the
+            agent stopped dawdling to survive and started <em>running</em> — covering
+            more ground in fewer steps.</li>
+            <li><strong>Health</strong> &mdash; the diagnostics from earlier chapters:
+            <code>explained_variance</code> (~0.86, the critic is good, Ch 3),
+            <code>approx_kl</code> (~0.01, updates aren't too big, Ch 4),
+            <code>clip_fraction</code> (~0.3, the clip is engaging, Ch 5), and
+            entropy slowly decaying (the policy growing more confident).</li>
+          </ul>
+          <figure>
+            <img src="images/healthy_run.png" alt="TensorBoard curves from a healthy Mario PPO run"
+                 onerror="this.closest('figure').style.display='none'">
+            <figcaption>A healthy run in TensorBoard (real capture).</figcaption>
+          </figure>
+
+          <h2 class="section-title" id="ch-7-shape">The shape of learning: bursts, not a smooth line</h2>
+          <p>New practitioners expect a tidy upward curve. Real RL looks like this:</p>
+          <div class="diagram-box"><pre>
+   max_x_pos
+   3160 &#9474;- - - - - - - - - - - - - - - - - - - - - flag
+        &#9474;
+        &#9474;                                    .&#8226;&#180;  &#8592; breakthrough!
+        &#9474;                              _.&#8226;&#180;
+        &#9474;        plateau          _.&#8226;&#180;             &#8592; cleared the
+        &#9474;      .&#8226;&#8212;&#8226;&#8212;&#8226;&#8212;&#8226;&#8212;&#8226;&#8212;&#8226;&#8212;&#8226;.&#8226;&#180;                    obstacle, easy
+        &#9474;    .&#180;       (stuck ~800)               ground unlocked
+        &#9474;  .&#180;
+        &#9474;.&#180;  fast early gains
+        &#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#8594; steps
+          </pre></div>
+          <p class="diagram-caption">Climb &#8594; plateau at an obstacle &#8594; breakthrough.
+          Progress arrives in bursts because clearing one hard spot unlocks a
+          stretch of easy level.</p>
+          <p>And it's <strong>noisy and non-monotonic</strong> — the curve dips and
+          recovers constantly. Two reasons you already know:
+          <code>max_x_pos</code> is a rolling average over recent episodes (Ch 1),
+          and the policy <em>samples</em> its actions (Ch 2), so individual episodes
+          vary. <strong>Watch the smoothed trend, never a single step.</strong> A dip
+          that recovers is normal; only a curve that climbs then collapses and stays
+          down (with <code>approx_kl</code> spiking) is real instability.</p>
+
+          <h2 class="section-title" id="ch-7-eval">One eval gotcha: stochastic vs deterministic</h2>
+          <p>During training PPO samples actions (it must explore). When you
+          <em>watch</em> a trained agent, you can either keep sampling or take the
+          single most-likely action (<em>deterministic</em>, argmax). For a strong
+          agent, deterministic is crisp and optimal. For a <em>weak</em> agent on a
+          deterministic emulator, argmax is brittle — it plays the exact same doomed
+          run every time, while sampling at least explores. Rule of thumb:
+          <strong>sample while learning, go deterministic for the final winner.</strong></p>
+
+          <div class="callout mario" id="ch-7-mario">
+            <span class="callout-label">In our Mario run</span>
+            We added <code>mario/flag_rate</code> and <code>mario/max_x_pos</code>
+            ourselves (a few <code>logger.record(...)</code> lines) precisely so the
+            dashboard shows progress toward <em>winning</em>, not just reward going
+            up. The win rate sitting at 0 while <code>max_x_pos</code> climbs is the
+            expected early picture — the flag only gets reached once the agent can
+            run nearly the whole level.
           </div>
         </div>
       </section>
