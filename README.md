@@ -259,7 +259,7 @@ Systematic tuning and reward-shaping experiments are a planned **Stage 04**.
 Two ways, both in `src/play.py`:
 
 ```bash
-# Live: open a real-time NES window, 3x size (plays 3 episodes by default)
+# Live: open a real-time NES window, 3x size (plays one episode by default)
 python src/play.py --checkpoint checkpoints/ppo_mario.zip
 
 # Record: save a GIF (rock-solid regardless of windowing)

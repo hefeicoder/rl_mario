@@ -70,14 +70,15 @@ def record_episode(checkpoint, out_path, max_steps=4000):
 NES_HEIGHT, NES_WIDTH = 240, 256
 
 
-def play_live(checkpoint, episodes=3, max_steps=4000, fps=30,
+def play_live(checkpoint, episodes=1, max_steps=4000, fps=30,
               deterministic=False, scale=3):
     """Open a real-time, upscaled NES window and watch the agent play.
 
     nes-py's built-in "human" window is hardcoded to the native 240x256
     (tiny on a Retina display), so instead we render frames ourselves and
     blit them into our own viewer sized ``scale`` x larger — nes-py's viewer
-    scales the image to fill the window, giving a crisp NxN view.
+    scales the image to fill the window, giving a crisp NxN view. Plays one
+    episode by default; pass episodes>1 to watch several back-to-back.
 
     deterministic=False (default) samples from the policy like training does,
     so each episode varies and an early agent explores further than its brittle
@@ -117,7 +118,7 @@ def main():
     p.add_argument("--checkpoint", default=None)
     p.add_argument("--record", action="store_true")
     p.add_argument("--out", default="videos/mario_1-1.gif")
-    p.add_argument("--episodes", type=int, default=3)
+    p.add_argument("--episodes", type=int, default=1)
     p.add_argument("--deterministic", action="store_true",
                    help="always pick the argmax action (best for a trained agent)")
     p.add_argument("--scale", type=int, default=3,
