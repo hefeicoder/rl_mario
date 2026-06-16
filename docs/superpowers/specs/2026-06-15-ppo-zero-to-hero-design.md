@@ -9,8 +9,8 @@
 A chapter-based, **intuition-first** tutorial that teaches Proximal Policy
 Optimization (PPO) "from 0 to hero," using the project's own Super Mario Bros
 agent as the running example. Delivered as a single self-contained HTML
-"study notes" document styled after
-`/Users/xishu/cc/inference-technology.html`.
+"study notes" document (`ppo-from-zero-to-hero.html` at the repo top level)
+styled after `/Users/xishu/cc/inference-technology.html`.
 
 **Audience:** someone who finishes able to *explain* PPO, *tune* it, and
 *rescue a stuck run* — not necessarily re-derive it from scratch. Math appears
@@ -89,9 +89,11 @@ until PPO is the natural answer. Mario anchors every concept.
 
 ## Placement & integration
 
-- File: `docs/ppo-from-zero-to-hero.html` (self-contained).
-- Real screenshots: 1–2 actual TensorBoard captures saved under
-  `docs/images/` and embedded in Ch 7–8 (the PPO_3 breakout chart for Ch 8).
+- File: `ppo-from-zero-to-hero.html` at the **repo top level** (next to
+  `README.md`), self-contained.
+- Real screenshots: 1–2 actual TensorBoard captures saved under a top-level
+  `images/` directory and embedded in Ch 7–8 (the PPO_3 breakout chart for
+  Ch 8), referenced with relative paths.
 - Link from the top-level `README.md` References section.
 
 ## Build approach
