@@ -106,6 +106,15 @@
               <li><a href="#ch-1-question">The question</a></li>
             </ul>
           </li>
+          <li>
+            <a href="#ch-2">2 · Policy gradients</a>
+            <ul>
+              <li><a href="#ch-2-idea">The core idea</a></li>
+              <li><a href="#ch-2-math">One equation</a></li>
+              <li><a href="#ch-2-catch">The catch: noise</a></li>
+              <li><a href="#ch-2-mario">In our Mario run</a></li>
+            </ul>
+          </li>
         </ol>
       </nav>
     </aside>
@@ -193,6 +202,83 @@
           it earns more of them?</strong> The next chapter gives the foundational
           answer — and every chapter after it fixes a problem the previous answer
           created, until we arrive at PPO.</p>
+        </div>
+      </section>
+      <section class="chapter" id="ch-2">
+        <div class="chapter-header">
+          <div class="chapter-header-left">
+            <div class="chapter-num">2</div>
+            <div class="chapter-title-group">
+              <div class="chapter-label">The foundational answer</div>
+              <div class="chapter-title">Policy gradients: push up what worked</div>
+            </div>
+          </div>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="chapter-body">
+          <p>Chapter 1 left us with a question: given only rewards, how do we make
+          the policy better? Here is the oldest, simplest, most honest answer —
+          the idea every modern method (PPO included) is built on top of. It has a
+          name, <strong>REINFORCE</strong>, but the idea is what matters.</p>
+
+          <h2 class="section-title" id="ch-2-idea">The core idea, in one sentence</h2>
+          <p><strong>Play an episode. Then make the actions that led to high return
+          more likely, and the actions that led to low return less likely.</strong>
+          That's it. If a run went well, do more of what you did; if it went badly,
+          do less. Repeat a few million times and the policy drifts toward
+          behavior that earns reward.</p>
+          <div class="diagram-box"><pre>
+   one episode of Mario:
+
+   s&#8320; &#8594; a&#8320;:RIGHT      &#8594; return was HIGH  &#8594;  &#8593; make RIGHT here more likely
+   s&#8321; &#8594; a&#8321;:RIGHT+JUMP &#8594; return was HIGH  &#8594;  &#8593; make this jump more likely
+   s&#8322; &#8594; a&#8322;:LEFT       &#8594; return was LOW   &#8594;  &#8595; make LEFT here less likely
+   s&#8323; &#8594; a&#8323;:DOWN       &#8594; return was LOW   &#8594;  &#8595; make DOWN here less likely
+          </pre></div>
+          <p class="diagram-caption">The whole algorithm: nudge each action's
+          probability up or down by how good the run was.</p>
+
+          <h2 class="section-title" id="ch-2-math">The one equation (and how to read it)</h2>
+          <p>Written as a gradient — the direction to nudge the policy's weights
+          $\theta$ to increase expected return — it's just that sentence in symbols:</p>
+          <div class="math-block">$$ \nabla_\theta J(\theta) = \mathbb{E}\big[\, \nabla_\theta \log \pi_\theta(a \mid s)\; \cdot\; R \,\big] $$</div>
+          <p>Read it in two halves:</p>
+          <ul>
+            <li>$\nabla_\theta \log \pi_\theta(a \mid s)$ — "the direction in
+            weight-space that makes <em>this action</em> more likely." Pure
+            book-keeping from the network.</li>
+            <li>$\cdot\, R$ — "scaled by how good the run was." A big positive
+            return pushes hard in that direction; a negative return pushes the
+            opposite way.</li>
+          </ul>
+          <p>Multiply them, average over experience, take the step. No labels, no
+          "correct action" — the reward alone decides which way each action's
+          probability moves. That's the magic of policy gradients.</p>
+
+          <h2 class="section-title" id="ch-2-catch">The catch: it's incredibly noisy</h2>
+          <p>Here's the problem that the next three chapters exist to fix. The
+          return $R$ for a whole episode is a single, wildly variable number. Mario
+          might play <em>almost identically</em> twice and die to a random Goomba once
+          and survive the other time — same actions, very different $R$. So every
+          action in the episode gets credited or blamed for the luck of the whole
+          run. The gradient estimate is correct <em>on average</em>, but so noisy that
+          learning crawls.</p>
+          <div class="callout">
+            <span class="callout-label">Where we're headed</span>
+            Chapter 3 attacks this noise (better credit assignment). Chapter 4
+            attacks a second problem — updates that are too big. Chapter 5 is PPO,
+            which solves the second problem with one clean trick.
+          </div>
+
+          <div class="callout mario" id="ch-2-mario">
+            <span class="callout-label">In our Mario run</span>
+            This noise is exactly why a single episode's <code>max_x_pos</code>
+            bounces around so much, and why we watch a <em>smoothed</em> curve over
+            ~100 episodes rather than reacting to any one run. The learning signal
+            is real, but it's buried in luck — and reducing that noise is most of
+            what makes PPO trainable.
+          </div>
         </div>
       </section>
     </main>
