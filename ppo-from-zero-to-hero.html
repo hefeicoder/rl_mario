@@ -365,13 +365,30 @@
           shift in perspective that powers every modern actor-critic method.</p>
 
           <h2 class="section-title" id="ch-3-baseline">Don't ask "was it good?" Ask "was it better than expected?"</h2>
-          <p>Suppose moving right always earns about +30 reward. An action that
-          earns +30 isn't <em>good</em> — it's <em>average</em>. An action that earns
-          +50 is what you want more of; one that earns +10 is what you want less
-          of. So instead of scaling by the raw return $R$, subtract a
-          <span class="glossary-term">baseline</span> — "what we expected from
-          here" — and scale by the difference. Same direction of learning, a
-          fraction of the noise, because the big common chunk of reward cancels out.</p>
+          <p>Start with an everyday analogy. A student scores <strong>80</strong> on
+          a test. Is that good? You can't tell — until you know the
+          <strong>class average</strong>. If the average was 50, an 80 is excellent;
+          if the average was 95, an 80 is poor. The raw score alone is nearly
+          meaningless; the score <em>relative to the average</em> is what carries
+          information. That class average is a <span class="glossary-term">baseline</span>.</p>
+          <div class="callout">
+            <span class="callout-label">Definition</span>
+            A <strong>baseline</strong> is a reference value we subtract from the
+            return before judging an action — typically "the return we'd normally
+            expect from this situation." It doesn't change <em>which way</em> we
+            learn; it just measures every action against a fair yardstick instead
+            of against zero.
+          </div>
+          <p>The same idea rescues policy gradients. Suppose that, in a given spot
+          in Mario, almost any action earns about <strong>+30</strong> return just
+          from the level scrolling along. Then an action that earns +30 isn't
+          <em>good</em> — it's <em>average</em>; +50 is genuinely better and should
+          be encouraged, +10 is worse and should be discouraged. So instead of
+          scaling each action's update by the raw return $R$ (Chapter 2), we
+          subtract the baseline — what we expected here — and scale by the
+          <em>difference</em>. Same direction of learning, a fraction of the noise,
+          because that big common "+30 for everyone" chunk cancels out and stops
+          drowning the signal.</p>
 
           <h2 class="section-title" id="ch-3-advantage">Value and advantage</h2>
           <p>The natural baseline is the <span class="glossary-term">value
