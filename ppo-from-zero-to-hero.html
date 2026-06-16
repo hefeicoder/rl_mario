@@ -141,6 +141,15 @@
               <li><a href="#ch-5-mario">In our Mario run</a></li>
             </ul>
           </li>
+          <li>
+            <a href="#ch-6">6 · PPO in practice</a>
+            <ul>
+              <li><a href="#ch-6-loop">The full loop</a></li>
+              <li><a href="#ch-6-knobs">The knobs</a></li>
+              <li><a href="#ch-6-code">In code</a></li>
+              <li><a href="#ch-6-mario">In our Mario run</a></li>
+            </ul>
+          </li>
         </ol>
       </nav>
     </aside>
@@ -515,6 +524,87 @@
             <code>clip_range = 0.1</code> in <code>src/config.py</code>. A healthy
             <code>clip_fraction</code> means the brake is engaging on the right
             number of updates — not too loose, not strangling learning.
+          </div>
+        </div>
+      </section>
+      <section class="chapter" id="ch-6">
+        <div class="chapter-header">
+          <div class="chapter-header-left">
+            <div class="chapter-num">6</div>
+            <div class="chapter-title-group">
+              <div class="chapter-label">From idea to algorithm</div>
+              <div class="chapter-title">PPO in practice: the full loop</div>
+            </div>
+          </div>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="chapter-body">
+          <p>We have all the pieces. Here's how they snap together into the loop
+          that actually runs when you type <code>model.learn()</code> — and what
+          every hyperparameter in our config is really controlling.</p>
+
+          <h2 class="section-title" id="ch-6-loop">The full PPO loop</h2>
+          <p>PPO alternates between <em>collecting</em> fresh experience and
+          <em>learning</em> from it, over and over:</p>
+          <div class="diagram-box"><pre>
+   repeat forever:
+
+   1. COLLECT   run the current policy in N parallel envs for
+                a fixed number of steps  &#8594;  a batch of rollouts
+
+   2. ESTIMATE  compute advantages A for every step (GAE, Ch 3)
+
+   3. UPDATE    for K epochs, in minibatches:
+                  &#8226; compute the ratio r (Ch 5)
+                  &#8226; take a gradient step on the CLIPPED objective
+                  &#8226; (the clip keeps each step in the trust region)
+
+   4. DISCARD   throw the batch away, go back to step 1 with the
+                improved policy
+          </pre></div>
+          <p class="diagram-caption">Collect &#8594; estimate &#8594; clipped update &#8594; repeat.
+          PPO is "on-policy": each batch is collected by the latest policy and used
+          only briefly, which is why steps 1 and 4 bookend every update.</p>
+
+          <h2 class="section-title" id="ch-6-knobs">The knobs (and what they do)</h2>
+          <p>Now PPO's hyperparameters read as plain English. These are our actual
+          values from <code>src/config.py</code>:</p>
+          <ul>
+            <li><code>n_steps = 512</code> &mdash; how many steps each env collects
+            before an update (rollout length).</li>
+            <li><code>N_ENVS = 8</code> &mdash; how many emulators run in parallel
+            for diverse, decorrelated experience.</li>
+            <li><code>n_epochs = 4</code> &mdash; how many times we reuse each batch
+            before discarding it (the clip is what makes this safe).</li>
+            <li><code>batch_size = 256</code> &mdash; minibatch size for each
+            gradient step.</li>
+            <li><code>clip_range = 0.1</code> &mdash; $\epsilon$, the trust-region
+            width from Chapter 5.</li>
+            <li><code>gamma = 0.9</code> &mdash; the discount / horizon (Ch 1).</li>
+            <li><code>gae_lambda = 0.95</code> &mdash; the bias/variance dial on the
+            advantage (Ch 3).</li>
+            <li><code>ent_coef = 0.01</code> &mdash; an <em>entropy bonus</em> that
+            rewards keeping the policy a little random, so it doesn't stop exploring
+            too soon. (This one becomes the hero of Chapter 8.)</li>
+          </ul>
+
+          <h2 class="section-title" id="ch-6-code">The same thing, in code</h2>
+          <p>In this project it's a few lines of Stable-Baselines3 — the library
+          implements the loop above; we just hand it the env and the knobs:</p>
+          <pre class="code-block"><code>from stable_baselines3 import PPO
+
+model = PPO("CnnPolicy", venv, n_steps=512, n_epochs=4,
+            clip_range=0.1, gamma=0.9, gae_lambda=0.95,
+            ent_coef=0.01, ...)
+model.learn(total_timesteps=4_000_000)   # runs collect&#8594;estimate&#8594;update</code></pre>
+
+          <div class="callout mario" id="ch-6-mario">
+            <span class="callout-label">In our Mario run</span>
+            Those 8 parallel envs are why we measure ~207 env-steps/s on an Apple
+            M1 Max, and why training is <strong>emulator-bound on the CPU</strong>,
+            not GPU-bound — the bottleneck is stepping 8 NES emulators, not the tiny
+            CNN. It's also why a 4-million-step run takes ~5.4 hours here.
           </div>
         </div>
       </section>
