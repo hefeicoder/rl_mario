@@ -124,6 +124,14 @@
               <li><a href="#ch-3-mario">In our Mario run</a></li>
             </ul>
           </li>
+          <li>
+            <a href="#ch-4">4 · Updates that blow up</a>
+            <ul>
+              <li><a href="#ch-4-cliff">The cliff</a></li>
+              <li><a href="#ch-4-trust">Trust regions (TRPO)</a></li>
+              <li><a href="#ch-4-mario">In our Mario run</a></li>
+            </ul>
+          </li>
         </ol>
       </nav>
     </aside>
@@ -354,6 +362,71 @@
             the real return its $V(s)$ predictions account for. High means the
             baseline is trustworthy, so the advantage — and every policy update
             built on it — is clean. We use <code>gae_lambda = 0.95</code>.
+          </div>
+        </div>
+      </section>
+      <section class="chapter" id="ch-4">
+        <div class="chapter-header">
+          <div class="chapter-header-left">
+            <div class="chapter-num">4</div>
+            <div class="chapter-title-group">
+              <div class="chapter-label">Fixing problem #2: instability</div>
+              <div class="chapter-title">The other catch: updates that blow up</div>
+            </div>
+          </div>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="chapter-body">
+          <p>Chapter 3 cleaned up the <em>direction</em> we push the policy. But
+          there's a second, sneakier problem: <strong>how far</strong> we push. Take
+          too big a step and training doesn't just slow down — it can detonate.</p>
+
+          <h2 class="section-title" id="ch-4-cliff">Why one greedy step can destroy a good policy</h2>
+          <p>Here's the trap that makes RL different from ordinary supervised
+          learning. We collected our experience <em>using the current policy</em>.
+          The gradient says "this direction looks good" — but it's only trustworthy
+          <em>near</em> the current policy. Take a giant step and you land at a policy
+          so different that the data you used no longer describes it at all. The
+          move that looked like +reward on paper can collapse behavior entirely.
+          And because the <em>next</em> batch of data is collected by this broken
+          policy, there's nothing to pull it back. It can spiral.</p>
+          <div class="diagram-box"><pre>
+   surrogate reward
+        &#9650;
+        &#9474;        .-&#8226;-.          &#8592; small step: climb toward the peak
+        &#9474;      .'     '.
+        &#9474;    .'         '&#8226;        &#8592; the model THINKS reward keeps rising...
+        &#9474;   /             \
+        &#9474;  &#8226;               \________
+        &#9474;                          &#8595;
+        &#9474;                      (real policy falls off a cliff)
+        &#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#8594;  how far we moved the policy
+          </pre></div>
+          <p class="diagram-caption">The surrogate objective is only accurate near
+          the old policy. Trust it too far and you walk off a cliff.</p>
+
+          <h2 class="section-title" id="ch-4-trust">The fix: stay in a trust region</h2>
+          <p>The cure is intuitive: <strong>don't let the policy change too much in
+          a single update.</strong> Keep each step inside a "trust region" where the
+          data still roughly describes the policy. The classic rigorous version is
+          <span class="glossary-term">TRPO</span> (Trust Region Policy
+          Optimization). It measures how different the new policy is from the old
+          using <span class="glossary-term">KL divergence</span> — think of it as a
+          "distance between two policies" — and mathematically <em>constrains</em>
+          each update so that distance stays small.</p>
+          <p>TRPO works and was a milestone. The downside: enforcing that constraint
+          exactly involves heavy machinery (second-order optimization) that's
+          fiddly to implement and slow to run. Which sets up the obvious question —
+          the one PPO answers: <strong>could we get this same "don't move too far"
+          safety with something far simpler?</strong></p>
+
+          <div class="callout mario" id="ch-4-mario">
+            <span class="callout-label">In our Mario run</span>
+            The metric <code>train/approx_kl</code> (~0.01 when healthy) is exactly
+            this "how far did the policy move this update" measure. We watch it as a
+            stability gauge: a sudden spike means an update was too aggressive. PPO,
+            next chapter, is what keeps it small without TRPO's complexity.
           </div>
         </div>
       </section>
