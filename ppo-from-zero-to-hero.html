@@ -115,6 +115,15 @@
               <li><a href="#ch-2-mario">In our Mario run</a></li>
             </ul>
           </li>
+          <li>
+            <a href="#ch-3">3 · Taming the noise</a>
+            <ul>
+              <li><a href="#ch-3-baseline">Better than expected</a></li>
+              <li><a href="#ch-3-advantage">Value &amp; advantage</a></li>
+              <li><a href="#ch-3-ac">Actor-critic &amp; GAE</a></li>
+              <li><a href="#ch-3-mario">In our Mario run</a></li>
+            </ul>
+          </li>
         </ol>
       </nav>
     </aside>
@@ -278,6 +287,73 @@
             ~100 episodes rather than reacting to any one run. The learning signal
             is real, but it's buried in luck — and reducing that noise is most of
             what makes PPO trainable.
+          </div>
+        </div>
+      </section>
+      <section class="chapter" id="ch-3">
+        <div class="chapter-header">
+          <div class="chapter-header-left">
+            <div class="chapter-num">3</div>
+            <div class="chapter-title-group">
+              <div class="chapter-label">Fixing problem #1: noise</div>
+              <div class="chapter-title">Baselines, value functions &amp; advantage</div>
+            </div>
+          </div>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="chapter-body">
+          <p>Policy gradients work, but credit every action with the luck of the
+          whole episode — so the signal is drowned in noise. The fix is a single
+          shift in perspective that powers every modern actor-critic method.</p>
+
+          <h2 class="section-title" id="ch-3-baseline">Don't ask "was it good?" Ask "was it better than expected?"</h2>
+          <p>Suppose moving right always earns about +30 reward. An action that
+          earns +30 isn't <em>good</em> — it's <em>average</em>. An action that earns
+          +50 is what you want more of; one that earns +10 is what you want less
+          of. So instead of scaling by the raw return $R$, subtract a
+          <span class="glossary-term">baseline</span> — "what we expected from
+          here" — and scale by the difference. Same direction of learning, a
+          fraction of the noise, because the big common chunk of reward cancels out.</p>
+
+          <h2 class="section-title" id="ch-3-advantage">Value and advantage</h2>
+          <p>The natural baseline is the <span class="glossary-term">value
+          function</span> $V(s)$ = "the return I expect from state $s$ if I play
+          normally." Subtracting it gives the <span class="glossary-term">advantage</span>:</p>
+          <div class="math-block">$$ A(s,a) = R - V(s) \quad\;\; \begin{cases} > 0 & \text{better than expected} \rightarrow \text{push } \uparrow \\ < 0 & \text{worse than expected} \rightarrow \text{push } \downarrow \end{cases} $$</div>
+          <p>Now the policy-gradient step uses $A$ in place of $R$. Same idea as
+          Chapter 2 — make good actions likelier — but "good" now means "beat the
+          baseline," which is a far calmer, more informative signal.</p>
+          <div class="diagram-box"><pre>
+   Chapter 2 (raw return R):      Chapter 3 (advantage A):
+   a&#8320;  &#8593;&#8593;&#8593;&#8593;&#8593;&#8593;&#8593;  (R=+52)         a&#8320;  &#8593;&#8593;       (A=+22, a bit above avg)
+   a&#8321;  &#8593;&#8593;&#8593;&#8593;&#8593;&#8593;&#8593;  (R=+48)         a&#8321;  &#8595;        (A=&#8211;2,  a bit below avg)
+   a&#8322;  &#8593;&#8593;&#8593;&#8593;&#8593;&#8593;   (R=+44)         a&#8322;  &#8595;&#8595;&#8595;      (A=&#8211;26, clearly bad)
+   big noisy pushes, all up        small honest pushes, signed
+          </pre></div>
+          <p class="diagram-caption">Subtracting the baseline turns "everything was
+          positive, who knows which mattered" into a clean better/worse signal.</p>
+
+          <h2 class="section-title" id="ch-3-ac">Actor-critic, and the GAE knob</h2>
+          <p>But where does $V(s)$ come from? We learn it too, with a second network
+          (or a second head). This is the <span class="glossary-term">actor-critic</span>
+          setup: the <strong>actor</strong> is the policy $\pi$, the <strong>critic</strong>
+          is the value estimate $V$. The critic judges; the actor improves based on
+          the judgement.</p>
+          <p>One more refinement you'll see named in configs:
+          <span class="glossary-term">GAE</span> (generalized advantage estimation).
+          It's a dial, $\lambda$, for <em>how</em> you estimate the advantage —
+          trading off bias against variance. Small $\lambda$ = lower variance but
+          more biased; large $\lambda$ = the reverse. You rarely touch it; just know
+          it's the knob behind a cleaner advantage signal.</p>
+
+          <div class="callout mario" id="ch-3-mario">
+            <span class="callout-label">In our Mario run</span>
+            The TensorBoard metric <code>train/explained_variance</code> (~0.86 in
+            our run) is <em>literally a report card for the critic</em>: how much of
+            the real return its $V(s)$ predictions account for. High means the
+            baseline is trustworthy, so the advantage — and every policy update
+            built on it — is clean. We use <code>gae_lambda = 0.95</code>.
           </div>
         </div>
       </section>
