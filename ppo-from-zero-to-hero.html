@@ -210,14 +210,16 @@
           agent picks an action, the environment reacts and hands back a new
           observation and a reward, forever (or until the episode ends).</p>
           <div class="diagram-box"><pre>
-        &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472; action a&#8348; &#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9484;
-        &#9474;                                  &#9660;
-   &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;            &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;
-   &#9474;     AGENT     &#9474;            &#9474;  ENVIRONMENT  &#9474;
-   &#9474;  (the policy) &#9474;            &#9474;  (the game)   &#9474;
-   &#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;            &#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;
-        &#9650;                                  &#9474;
-        &#9492;&#9472;&#9472; observation s&#8348;&#8330;&#8321;, reward r&#8348; &#9472;&#9472;&#9472;&#9472;&#9472;&#9496;
+        action a_t
+   ┌───────────────────┐
+   │                   ▼
+┌──┴───────┐    ┌───────────────┐
+│  AGENT   │    │  ENVIRONMENT  │
+│ (policy) │    │  (the game)   │
+└──────────┘    └───────┬───────┘
+   ▲                    │
+   └────────────────────┘
+   observation s_t+1, reward r_t
           </pre></div>
           <p class="diagram-caption">The agent&ndash;environment loop. Everything in
           this document is about making the box on the left better.</p>
@@ -294,10 +296,10 @@
           <div class="diagram-box"><pre>
    one episode of Mario:
 
-   s&#8320; &#8594; a&#8320;:RIGHT      &#8594; return was HIGH  &#8594;  &#8593; make RIGHT here more likely
-   s&#8321; &#8594; a&#8321;:RIGHT+JUMP &#8594; return was HIGH  &#8594;  &#8593; make this jump more likely
-   s&#8322; &#8594; a&#8322;:LEFT       &#8594; return was LOW   &#8594;  &#8595; make LEFT here less likely
-   s&#8323; &#8594; a&#8323;:DOWN       &#8594; return was LOW   &#8594;  &#8595; make DOWN here less likely
+   s0 &#8594; a0:RIGHT      &#8594; return was HIGH  &#8594;  &#8593; make RIGHT here more likely
+   s1 &#8594; a1:RIGHT+JUMP &#8594; return was HIGH  &#8594;  &#8593; make this jump more likely
+   s2 &#8594; a2:LEFT       &#8594; return was LOW   &#8594;  &#8595; make LEFT here less likely
+   s3 &#8594; a3:DOWN       &#8594; return was LOW   &#8594;  &#8595; make DOWN here less likely
           </pre></div>
           <p class="diagram-caption">The whole algorithm: nudge each action's
           probability up or down by how good the run was.</p>
@@ -381,9 +383,9 @@
           baseline," which is a far calmer, more informative signal.</p>
           <div class="diagram-box"><pre>
    Chapter 2 (raw return R):      Chapter 3 (advantage A):
-   a&#8320;  &#8593;&#8593;&#8593;&#8593;&#8593;&#8593;&#8593;  (R=+52)         a&#8320;  &#8593;&#8593;       (A=+22, a bit above avg)
-   a&#8321;  &#8593;&#8593;&#8593;&#8593;&#8593;&#8593;&#8593;  (R=+48)         a&#8321;  &#8595;        (A=&#8211;2,  a bit below avg)
-   a&#8322;  &#8593;&#8593;&#8593;&#8593;&#8593;&#8593;   (R=+44)         a&#8322;  &#8595;&#8595;&#8595;      (A=&#8211;26, clearly bad)
+   a0  &#8593;&#8593;&#8593;&#8593;&#8593;&#8593;&#8593;  (R=+52)         a0  &#8593;&#8593;       (A=+22, a bit above avg)
+   a1  &#8593;&#8593;&#8593;&#8593;&#8593;&#8593;&#8593;  (R=+48)         a1  &#8595;        (A=&#8211;2,  a bit below avg)
+   a2  &#8593;&#8593;&#8593;&#8593;&#8593;&#8593;   (R=+44)         a2  &#8595;&#8595;&#8595;      (A=&#8211;26, clearly bad)
    big noisy pushes, all up        small honest pushes, signed
           </pre></div>
           <p class="diagram-caption">Subtracting the baseline turns "everything was
